@@ -46,6 +46,7 @@ async fn main() -> Result< (), Box< dyn std::error::Error > >
   client.pull( Some( pull_meta.clone() ) ).await?;
 
   // Read all records with label "Lanbuage"
+  let pull_meta = Metadata::from_iter( vec![( "n", -1 )] );
   client.run( "MATCH ( elem:Language ) RETURN elem;", None, None ).await?;
   let ( records, _response ) = client.pull( Some( pull_meta.clone() ) ).await?;
   for record in records
