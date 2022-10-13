@@ -52,8 +52,7 @@ pub async fn get( db : web::Data< Db > ) -> actix_web::Result< impl Responder >
   let data = db.get( "" ).await.unwrap();
   let data = data.iter()
   .map( | node | Todo::try_from( node.to_owned() ) )
-  .filter( | node | node.is_ok() )
-  .map( | node | node.unwrap() )
+  .filter_map( | node | node.ok() )
   .collect::< Vec< _ > >();
 
   Ok( web::Json( data ) )

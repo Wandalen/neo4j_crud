@@ -1,5 +1,6 @@
-use std::{sync::{Arc, Mutex, MutexGuard}};
+use std::sync::Arc;
 
+use async_lock::{ Mutex, MutexGuard };
 use tokio::{ io::BufStream, net::ToSocketAddrs };
 use tokio_util::compat::{ Compat, TokioAsyncReadCompatExt };
 
@@ -33,12 +34,12 @@ impl Db
     let stream = BufStream::new( stream ).compat();
     let client = Client::new( stream, &[ V4_0, 0, 0, 0 ] ).await?;
 
-    Ok( Self{ client :Arc::new( Mutex::new( client ) ) } )
+    Ok( Self{ client : Arc::new( Mutex::new( client ) ) } )
   }
 
-  pub fn lock< 'a >( &'a self ) -> MutexGuard< DbClient >
+  pub async fn lock( &self ) -> MutexGuard< DbClient >
   {
-    self.client.lock().unwrap()
+    self.client.lock().await
   }
 
   ///
@@ -51,7 +52,7 @@ impl Db
     Un : Into< String >,
     Pw : Into< String >
   {
-    let response: Message = self.lock().hello
+    let response: Message = self.lock().await.hello
     (
       Metadata::from_iter( vec!
       [
@@ -80,8 +81,8 @@ impl Db
 
     let params = Params::from_iter( vec![( "value", value.into() )] );
     let query = format!( "CREATE ( {lb} {{ {f_n} : $value }} );", lb=label.into(), f_n = field_name.into() );
-    self.lock().run( query, Some( params ), None ).await?;
-    self.lock().pull( Some( pull_meta.clone() ) ).await?;
+    self.lock().await.run( query, Some( params ), None ).await?;
+    self.lock().await.pull( Some( pull_meta.clone() ) ).await?;
 
     Ok( () )
   }
@@ -100,8 +101,8 @@ impl Db
     let pull_meta = Metadata::from_iter( vec![( "n", -1 )] );
 
     let query = format!( "MATCH ( n{filter} ) RETURN n;", filter = filter.into() );
-    self.lock().run( query, None, None ).await?;
-    let ( records, _response ) = self.lock().pull( Some( pull_meta.clone() ) ).await?;
+    self.lock().await.run( query, None, None ).await?;
+    let ( records, _response ) = self.lock().await.pull( Some( pull_meta.clone() ) ).await?;
 
     Ok( records.iter().map( | rec | Node::try_from( rec.fields()[ 0 ].clone() ).unwrap() ).collect() )
   }
@@ -125,8 +126,8 @@ impl Db
     let pull_meta = Metadata::from_iter( vec![( "n", -1 )] );
 
     let query = format!( r#"MATCH ( n{filter} ) SET n{changes}"#, filter = filter.into(), changes = changes.into() );
-    self.lock().run( query, None, None ).await?;
-    self.lock().pull( Some( pull_meta.clone() ) ).await?;
+    self.lock().await.run( query, None, None ).await?;
+    self.lock().await.pull( Some( pull_meta.clone() ) ).await?;
 
     Ok( () )
   }
@@ -139,8 +140,8 @@ impl Db
     let pull_meta = Metadata::from_iter( vec![("n", -1)] );
 
     let query = format!( "MATCH ( n{filter} ) DETACH DELETE n", filter = filter.into() );
-    self.lock().run( query, None, None ).await?;
-    self.lock().pull( Some( pull_meta ) ).await?;
+    self.lock().await.run( query, None, None ).await?;
+    self.lock().await.pull( Some( pull_meta ) ).await?;
 
     Ok( () )
   }
@@ -152,7 +153,7 @@ impl Drop for Db
   {
     futures::executor::block_on( async
     {
-      self.lock().goodbye().await.unwrap()
+      self.lock().await.goodbye().await.unwrap()
     })
   }
 }
