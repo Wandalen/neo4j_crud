@@ -1,5 +1,6 @@
 use actix_web::{ get, post, Responder, web, delete, patch };
 use bolt_client::bolt_proto::Value;
+use bolt_proto::value::Node;
 use serde::{ Serialize, Deserialize };
 
 use crate::db::Db;
@@ -11,29 +12,49 @@ pub struct Todo
   pub description : String,
 }
 
+#[ derive( Debug ) ]
+pub enum TodoError
+{
+  HasNoTitle,
+  HasNoDescription,
+  IncompatibleTypeInDescription,
+}
+
+impl TryFrom< Node > for Todo
+{
+  type Error = TodoError;
+
+  fn try_from( value: Node ) -> Result< Self, Self::Error >
+  {
+    let labels = value.labels();
+    let props = value.properties();
+
+    if labels.is_empty() { return Err( TodoError::HasNoTitle )  }
+    let description = props.get( "description" ).ok_or( TodoError::HasNoDescription )?;
+
+    if let Value::String( description ) = description
+    {
+      Ok( Todo { title : labels[ 0 ].to_owned(), description : description.to_owned() } )
+    }
+    else
+    {
+      Err( TodoError::IncompatibleTypeInDescription )
+    }
+  }
+}
+
 
 #[ get( "/get" ) ]
 pub async fn get( db : web::Data< Db > ) -> actix_web::Result< impl Responder >
 {
   log::info!( "GET" );
+
   let data = db.get( "" ).await.unwrap();
-  // TODO: Rewrite this. IDK how
-  // bolt-proto Value has no serialize/deserialize
-  let data = data.iter().map( | node |
-  {
-    let props = node.properties().iter().map( |( key, value )|
-    {
-      if let Value::String( string ) = value
-      {
-        ( key, string.to_string() )
-      }
-      else
-      {
-        ( key, "".to_string() )
-      }
-    }).collect::< Vec< _ > >();
-    Todo{ title : node.labels()[ 0 ].clone(), description : props[ 0 ].1.to_owned() }
-  }).collect::< Vec< _ > >();
+  let data = data.iter()
+  .map( | node | Todo::try_from( node.to_owned() ) )
+  .filter( | node | node.is_ok() )
+  .map( | node | node.unwrap() )
+  .collect::< Vec< _ > >();
 
   Ok( web::Json( data ) )
 }

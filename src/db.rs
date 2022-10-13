@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::{sync::{Arc, Mutex, MutexGuard}};
 
 use tokio::{ io::BufStream, net::ToSocketAddrs };
 use tokio_util::compat::{ Compat, TokioAsyncReadCompatExt };
