@@ -44,23 +44,3 @@ async fn main() -> std::io::Result< () >
   .bind(( "127.0.0.1", 8080 ))?
   .run().await
 }
-
-
-// db.create( "", "name", "Peter" ).await?;
-// db.create( ":languages", "name", "Rust" ).await?;
-// db.create( ":languages", "name", "Java" ).await?;
-
-// let nodes = db.get( "" ).await?;
-// log::info!( "Read all:\n{:#?}", &nodes );
-
-// let node = nodes[ 0 ].to_owned();
-// log::info!( "First node\nid: {}\nlabels: {:#?}\nprops: {:#?}", &node.node_identity(), &node.labels(), &node.properties() );
-
-// db.update( "{ name: \"Rust\" }", "+= { speed : \"Blazingly Fast\" }" ).await?;
-// db.update( "{ name: \"Peter\" }", ":human" ).await?;
-// log::info!( "Read all after update\n{:#?}", db.get( "" ).await? );
-
-// log::info!( "Read single by label and name-field\n{:#?}", db.get( ":languages{ name : \"Rust\" }" ).await? );
-// db.delete( "" ).await?;
-
-// log::info!( "End" );
