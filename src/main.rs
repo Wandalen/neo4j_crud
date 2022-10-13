@@ -1,5 +1,6 @@
 #![ warn( missing_docs ) ]
 #![ warn( missing_debug_implementations ) ]
+#![ warn( clippy::all ) ]
 
 //!
 //! CRUD examples
